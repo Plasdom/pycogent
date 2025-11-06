@@ -177,7 +177,7 @@ class COGENTDataset:
         else:
             fig, ax = plt.subplots(len(vars))
 
-        all_data = np.concat(
+        all_data = np.concatenate(
             [
                 np.array(
                     [self.var_data[var][i][1] for i in range(len(self.var_data[var]))]
