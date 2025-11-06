@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 from pathlib import Path
 import os
 import numpy as np
-import hdf5_opener as hdf5o
+import pycogent.hdf5_opener as hdf5o
 from matplotlib import animation
 import h5py
 
