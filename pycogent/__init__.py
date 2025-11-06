@@ -1,1 +1,1 @@
-from pycogent.cogent_dataset import COGENTDataset
+from pycogent.cogent_dataset import *
