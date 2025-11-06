@@ -1,0 +1,15 @@
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pycogent"
+authors = [
+    {name = "Dominic Power", email = "power8@llnl.gov"},
+]
+description = "COGENT analysis tools"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = ['h5py', 'matplotlib', 'numpy', 'scipy', 'xarray']
+
+version = "0.1"
