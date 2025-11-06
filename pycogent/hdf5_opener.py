@@ -1,4 +1,6 @@
 from pathlib import Path
+import numpy as np
+import h5py
 
 
 class DataHDF5:
@@ -90,10 +92,12 @@ class DataHDF5:
 
     # -----------------------------------------
 
-    def getData(self, a_flag, a_out=0):
+    def getData(self, a_flag: int, a_out: int = 0):
         """Get data out of the hdf5 file. As a result, a data array is filled properly.
         a_flag is either "main" or 0 for data itself, or "map" or 1 for mapping.
-        Output options: a_out==0 - nothing, a_out==1 - basic data, a_out==2 - data_array
+
+        :param a_flag: Flag for mapping
+        :param a_out==0 - nothing, a_out==1 - basic data, a_out==2 - data_array, defaults to 0
         """
 
         if self.is_created == False:
@@ -210,8 +214,6 @@ class DataHDF5:
             print("ERROR: getData() failed! Wrong a_flag, data is lost.")
         a_out > 0 and print("\n")
 
-    # -----------------------------------------
-
     def removeGhostCells(self, a_flag):
         # Assing variables
         if a_flag == "main" or a_flag == 0:
@@ -260,12 +262,7 @@ class DataHDF5:
             * (correction + box_set[0][2] - box_set[0][0])
             * (correction + box_set[0][3] - box_set[0][1])
         )
-        ##print(f"N_data:  {Ndata}")
-        # Assuming that the boxes are of equal size
-        # self.main_data_set = np.zeros(Ndata, dtype=np.float64)
-        # self.main_offset_set = np.zeros(len(self.offset), dtype=np.int64)
         tmp_arr = np.zeros(Ndata, dtype=np.float64)
-        # tmp_offset = np.zeros(len(self.offset), dtype=np.int64)
         tmp_offset = np.zeros(len(offset_set), dtype=np.int64)
 
         for ind, box in enumerate(box_set):
@@ -274,25 +271,8 @@ class DataHDF5:
             boxes[4 * ind + 1] = box[1]
             boxes[4 * ind + 2] = box[2]
             boxes[4 * ind + 3] = box[3]
-        # print(self.box_set[0][0].dtype)
-        # print(len(self.data_array))
-        # exit()
-        # print(f"a_flag: {a_flag}  comps: {comps}, L_bs: {len(box_set)}  {box_set[0]}  {box_set[1]}  {ghosts[0]}  {ghosts[1]}")
-        # print(tmp_arr.dtype, data_set.dtype, type(comps), boxes.dtype, type(len(box_set)), tmp_offset.dtype, offset_set.dtype, type(np.int32(ghosts[0])), type(np.int32(ghosts[1])), type(np.int32(correction)))
-        # self.lib_c.c_removeGhostCells2D(
-        #     tmp_arr,
-        #     data_set,
-        #     comps,
-        #     boxes,
-        #     len(box_set),
-        #     tmp_offset,
-        #     offset_set,
-        #     np.int32(ghosts[0]),
-        #     np.int32(ghosts[1]),
-        #     np.int32(correction),
-        # )
         tmp_arr = self.removeGhostCells2D(
-            Ndata,
+            tmp_arr,
             data_set,
             comps,
             boxes,
@@ -305,16 +285,13 @@ class DataHDF5:
         )
 
         if a_flag == "main" or a_flag == 0:
-            # print("----------")
             self.main_offset_set = tmp_offset
             self.main_data_set = tmp_arr
         elif a_flag == "map" or a_flag == 1:
-            print("++++++++++")
             self.map_offset_set = tmp_offset
             self.map_data_set = tmp_arr
 
         self.ghosts_done = True
-        print(f"ghosts of a_flag: {a_flag} have been removed")
         return True
 
         ## VG finish
@@ -322,7 +299,7 @@ class DataHDF5:
     # -----------------------------------------
     def removeGhostCells2D(
         self,
-        Ndata,
+        a_out_arr,
         a_data_array,
         a_Ncomp,
         a_box_set,
@@ -352,7 +329,7 @@ class DataHDF5:
             size_t a_ghost_y,                 // Number of ghost cells in y
             size_t a_box_ext                  // Extension of the box
         """
-        main_data_set = np.zeros(Ndata)
+        main_data_set = a_out_arr
         counter = 0
         i_run = 0
         for ibox in range(
@@ -386,7 +363,6 @@ class DataHDF5:
         str_out = ""
         # for i in range(100):
         print(len(self.map_data_set))
-        print("++++++++++n")
         for i in range(len(self.map_data_set)):
             a_num = self.map_data_set[i]
             str_out += form_float(a_num, 5) + "  "
@@ -525,7 +501,7 @@ class DataHDF5:
                 this_box[ind] = np.int32(elem)
             ########
             out_data = self.processBlock(
-                len(out_data),
+                out_data,
                 tmp_data,
                 arr_shape,
                 this_box,
@@ -549,7 +525,7 @@ class DataHDF5:
 
     def processBlock(
         self,
-        array_length,  # Implicitly returned array with properly reshaped data
+        arr,  # Implicitly returned array with properly reshaped data
         a_data,  # The raw data array
         a_shape,  # Shape of the reshaped a_arr, i.e. [n_comps, Nz, Ny, Nx] in 3D or [n_comps, Nx] in 1D
         a_box,  # Array of the box coordinates [x_lo, y_lo, z_lo, x_hi, y_hi, z_hi]
@@ -573,7 +549,7 @@ class DataHDF5:
         #   int n_x, n_y, n_z, n_q;
         #   int len_x, len_y, len_z, len_q;
         #   int block_size;
-        arr = np.zeros(array_length)
+        # arr = np.zeros(array_length)
         ncomps = a_shape[0]
 
         if a_dim == 1:

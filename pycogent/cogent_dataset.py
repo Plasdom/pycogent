@@ -5,7 +5,6 @@ import os
 import numpy as np
 import pycogent.hdf5_opener as hdf5o
 from matplotlib import animation
-import h5py
 
 
 class COGENTDataset:
@@ -82,7 +81,7 @@ class COGENTDataset:
                 a_mapping=True,
             )
             data.getData(a_flag="main", a_out=0)
-            data.getData(a_flag="map", a_out=2)
+            data.getData(a_flag="map", a_out=0)
             data.removeGhostCells("main")
             data.removeGhostCells("map")
             data.processAll("main")
@@ -95,86 +94,7 @@ class COGENTDataset:
                 z = data.map_data_arr[1][1:, 0]
             var_data.append((z, vals))
 
-            # data = h5py.File(self.rundir / plt_dirname / files[i])["level_0"]
-            # map = h5py.File(self.rundir / plt_dirname / map_files[i])["level_0"]
-
         return var_data
-
-    def remove_ghost_cells(self, datafile):
-        pass
-        # comps = self.main_comps
-        # offset_set = self.main_offset_set
-        # ghosts = self.main_ghosts
-        # data_set = self.main_data_set
-        # box_set = self.main_box_set
-
-        # # Check validity of the boxes
-        # N_box = len(box_set)
-        # N_offset = len(offset_set)
-        # if N_box + 1 != N_offset:
-        #     print("ERROR: removeGhostCells() failed! Corrupt data.")
-        #     return
-        # # Check ghosts cells, works in 2D for now
-        # if ghosts[0] == 0 and ghosts[1] == 0:
-        #     # In 4D pdf function, there are not ghost cells, so we need to leave from here
-        #     self.ghosts_done = True
-        #     return
-        # ## VG start
-        # """if (self.ghosts[0]==0 and self.ghosts[1]==0):
-        #     self.main_offset_set = self.offset
-        #     self.main_data_set = self.data_array
-        #     self.ghosts_done = True
-        #     return
-        # """
-        # # All the following is for 2D only!!!
-        # Nbox = len(box_set)
-        # boxes = np.zeros(4 * Nbox, dtype=np.int32)
-        # Ndata = (
-        #     comps
-        #     * Nbox
-        #     * (correction + box_set[0][2] - box_set[0][0])
-        #     * (correction + box_set[0][3] - box_set[0][1])
-        # )
-        # tmp_arr = np.zeros(Ndata, dtype=np.float64)
-        # tmp_offset = np.zeros(len(offset_set), dtype=np.int64)
-
-        # for ind, box in enumerate(box_set):
-        #     boxes[4 * ind] = box[0]
-        #     boxes[4 * ind + 1] = box[1]
-        #     boxes[4 * ind + 2] = box[2]
-        #     boxes[4 * ind + 3] = box[3]
-        # self.lib_c.c_removeGhostCells2D(
-        #     tmp_arr,
-        #     data_set,
-        #     comps,
-        #     boxes,
-        #     len(box_set),
-        #     tmp_offset,
-        #     offset_set,
-        #     np.int32(ghosts[0]),
-        #     np.int32(ghosts[1]),
-        #     np.int32(correction),
-        # )
-
-        # if a_flag == "main" or a_flag == 0:
-        #     # print("----------")
-        #     self.main_offset_set = tmp_offset
-        #     self.main_data_set = tmp_arr
-        # elif a_flag == "map" or a_flag == 1:
-        #     print("++++++++++")
-        #     self.map_offset_set = tmp_offset
-        #     self.map_data_set = tmp_arr
-        #     # print(len(tmp_arr))
-        #     # for iy in range(144):
-        #     #    str_out = ""
-        #     #    for ix in range(5):
-        #     #        str_out += f"{tmp_arr[ix+iy*5]}   "
-        #     #    print(str_out)
-        #     # print(f"TMP_ARR: {len(tmp_arr)}")
-
-        # self.ghosts_done = True
-        # print(f"ghosts of a_flag: {a_flag} have been removed")
-        # return True
 
     def plot(
         self,
