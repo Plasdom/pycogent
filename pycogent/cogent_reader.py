@@ -22,6 +22,7 @@ class COGENTReader:
             "vpari": {"species": "deuterium", "cogent_name": "parallelVelocity"},
             "vpare": {"species": "electron", "cogent_name": "parallelVelocity"},
             "phi": {"cogent_name": "potential"},
+            "E": {"cogent_name": "efield"},
         },
     ):
         """Generate a COGENT dataset from a given directory containing COGENT data
@@ -90,6 +91,10 @@ class COGENTReader:
                 vals = data.main_data_arr[0][:-4, 0]
                 if i == 0:
                     z = data.map_data_arr[1][1:, 0][:-4]
+            elif variable == "efield":
+                vals = data.main_data_arr[1, :, 0]
+                if i == 0:
+                    z = data.map_data_arr[1, 1:, 0]
             else:
                 vals = data.main_data_arr[0][:, 0]
                 if i == 0:

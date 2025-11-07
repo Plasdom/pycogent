@@ -7,6 +7,7 @@ import pycogent.hdf5_opener as hdf5o
 from pycogent.cogent_reader import COGENTReader
 from matplotlib import animation
 from matplotlib.widgets import Slider
+from matplotlib.colors import TABLEAU_COLORS
 
 
 @xr.register_dataset_accessor("cogent")
@@ -99,7 +100,7 @@ class COGENTDatasetAccessor:
         variables: str | list[str],
         savepath: str | None = None,
         fps: int = 5,
-        same_axes: bool = True,
+        same_axes: bool = False,
         max_t: int | None = None,
     ):
         """Animate one or a list of variables
@@ -117,17 +118,27 @@ class COGENTDatasetAccessor:
             fig, ax = plt.subplots(1)
         else:
             fig, ax = plt.subplots(len(variables))
+            if len(variables) == 1:
+                ax = [ax]
 
-        all_data = np.concatenate(
-            [np.array([var[i] for i in range(len(var))]) for var in variables]
-        )
-        minval = all_data.min()
-        maxval = all_data.max()
+        if same_axes:
+            all_data = np.concatenate(
+                [np.array([var[i] for i in range(len(var))]) for var in variables]
+            )
+            minval = all_data.min()
+            maxval = all_data.max()
+        else:
+            minval = []
+            maxval = []
+            for j in range(len(variables)):
+                minval.append(variables[j].min())
+                maxval.append(variables[j].max())
+
+        lines = [None for _ in range(len(variables))]
 
         def draw(i):
-            lines = []
             if same_axes:
-                ax.clear()
+                # ax.clear()
                 for j, var in enumerate(variables):
                     x = self.ds.z
                     y = var[i]
@@ -135,29 +146,26 @@ class COGENTDatasetAccessor:
                         label = var.attrs["name"]
                     except:
                         label = "var " + str(j)
-                    (l,) = ax.plot(x, y, label=label)
-                    lines.append(l)
-                ax.legend()
-                ax.set_xlabel("z")
-                ax.set_ylim((minval, maxval))
-                # ax.set_title("i={}".format(i))
-                ax.grid()
+                    if lines[j] is None:
+                        (l,) = ax.plot(x, y, label=label)
+                        lines[j] = l
+                    else:
+                        lines[j].set_data(x, y)
+
             else:
                 for j, var in enumerate(variables):
-                    ax[j].clear()
+                    # ax[j].clear()
                     x = self.ds.z
                     y = var[i]
                     try:
                         label = var.attrs["name"]
                     except:
                         label = "var " + str(j)
-                    (l,) = ax[j].plot(x, y, label=label)
-                    ax[j].legend()
-                    ax[j].set_xlabel("z")
-                    ax[j].set_ylim((minval, maxval))
-                    # ax[j].set_title(var + ", i={}".format(i))
-                    ax[j].grid()
-                    lines.append(l)
+                    if lines[j] is None:
+                        (l,) = ax[j].plot(x, y, label=label)
+                        lines[j] = l
+                    else:
+                        lines[j].set_data(x, y)
 
             return lines
 
@@ -165,7 +173,18 @@ class COGENTDatasetAccessor:
             max_t = len(variables[0])
         num_frames = int(min(len(variables[0]), max_t))
 
-        draw(0)
+        lines = draw(0)
+        if same_axes:
+            ax.set_xlabel("z")
+            ax.set_ylim((minval, maxval))
+            ax.grid(True)
+            ax.legend()
+        else:
+            for j in range(len(variables)):
+                ax[j].set_xlabel("z")
+                ax[j].set_ylim((minval[j], maxval[j]))
+                ax[j].grid(True)
+                ax[j].legend()
 
         if savepath is not None:
             anim = animation.FuncAnimation(
@@ -188,7 +207,7 @@ class COGENTDatasetAccessor:
 
             surf1_slider.on_changed(draw)
 
-            if same_axes or len(variables) == 1:
+            if same_axes:
                 fig.subplots_adjust(bottom=0.2)
             else:
                 fig.subplots_adjust(bottom=0.2, hspace=0.2)
@@ -202,6 +221,14 @@ def read_cogent_dataset(rundir: str | Path) -> xr.Dataset:
     :param rundir: Directory containing COGENT data
     :return: xr.Dataset
     """
-    ds = COGENTReader(rundir)
+    ds = COGENTReader(
+        rundir,
+        variables={
+            "phi": {"cogent_name": "potential"},
+            "E": {"cogent_name": "efield"},
+        },
+    )
     xds = xr.Dataset(ds.var_data)
+    xds.z.attrs["description"] = "z coordinate"
+    xds.t.attrs["description"] = "integer timestamp"
     return xds
