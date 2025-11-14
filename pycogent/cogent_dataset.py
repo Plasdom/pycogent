@@ -228,4 +228,5 @@ def read_cogent_dataset(rundir: str | Path) -> xr.Dataset:
     xds.z.attrs["description"] = "z coordinate"
     xds.t.attrs["description"] = "integer timestamp"
     xds.attrs["input"] = ds.input_dict
+    print("========= Succesfully created xarray dataset from COGENT data =========")
     return xds

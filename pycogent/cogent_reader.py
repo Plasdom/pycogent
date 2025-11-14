@@ -65,13 +65,33 @@ class COGENTReader:
                 )
             except Exception as e:
                 print(
-                    "WARNING: Failed to read variable: {} {}; {}".format(
+                    "WARNING: Failed to read variable: {}.{}; {}".format(
                         self.variables[v]["species"],
                         self.variables[v]["cogent_name"],
                         e,
                     )
                 )
         self.var_data = var_data
+
+        print(
+            "========= Succesfully ingested the following COGENT variables: ========="
+        )
+        for v in self.var_data.keys():
+            if self.variables[v]["species"] is None:
+                print(
+                    "\t{} ({})".format(
+                        v,
+                        self.variables[v]["cogent_name"],
+                    )
+                )
+            else:
+                print(
+                    "\t{} ({}.{})".format(
+                        v,
+                        self.variables[v]["species"],
+                        self.variables[v]["cogent_name"],
+                    )
+                )
 
     def get_shortname(self, variable: str, species=None):
         """Get the shortname (used in the output dataset) for a given variable and species combination
@@ -183,10 +203,10 @@ class COGENTReader:
         :param variable: Name of variable
         :param species: Species. If None, then the variable is not tied to a species (e.g. potential)
         """
-        if species is None:
-            print("Reading " + variable + "...")
-        else:
-            print("Reading " + species + " " + variable + "...")
+        # if species is None:
+        #     print("Reading " + variable + "...")
+        # else:
+        #     print("Reading " + species + " " + variable + "...")
 
         plt_dirname = "plt_" + variable + "_plots"
         if species is None:
@@ -245,6 +265,6 @@ class COGENTReader:
         else:
             var_data.attrs["name"] = species + "." + variable
 
-        print("Done")
+        # print("Done")
 
         return var_data
