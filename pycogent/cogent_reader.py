@@ -13,17 +13,6 @@ class COGENTReader:
     def __init__(
         self,
         rundir: str | Path,
-        variables: dict = {
-            "Ti": {"species": "deuterium", "cogent_name": "temperature"},
-            "Te": {"species": "electron", "cogent_name": "temperature"},
-            "ni": {"species": "deuterium", "cogent_name": "density"},
-            "ne": {"species": "electron", "cogent_name": "density"},
-            "nn": {"species": "neutrals", "cogent_name": "density"},
-            "vpari": {"species": "deuterium", "cogent_name": "parallelVelocity"},
-            "vpare": {"species": "electron", "cogent_name": "parallelVelocity"},
-            "phi": {"cogent_name": "potential"},
-            "E": {"cogent_name": "efield"},
-        },
     ):
         """Generate a COGENT dataset from a given directory containing COGENT data
 
@@ -34,22 +23,158 @@ class COGENTReader:
             self.rundir = Path(rundir)
         else:
             self.rundir = rundir
-        self.variables = variables
+        self.supported_variables = [
+            "efield",
+            "potential",
+            "temperature",
+            "density",
+            "parallelVelocity",
+            "pressure",
+            "energyDensity",
+            "fluidVelocity",
+            "parallelParticleFlux",
+            "kineticEnergyDensity",
+            "parallelEnergyDensity",
+            "perpEnergyDensity",
+            "parallelPressure",
+            "perpPressure",
+            "parallelHeatFlux",
+            "totalParallelHeatFlux",
+            "parallelTemperature",
+            "perpTemperature",
+            "dfn",
+        ]
+
         self.read()
 
     def read(self):
         """Read COGENT data"""
-        var_data = {}
 
+        # Read input file
+        self.input_dict = self.read_input_file()
+
+        # Identify variables
+        self.variables = self.identify_variables()
+
+        # read variables
+        var_data = {}
         for v in self.variables.keys():
-            if "species" in self.variables[v].keys():
+            try:
                 var_data[v] = self.ingest_variable(
                     self.variables[v]["cogent_name"], self.variables[v]["species"]
                 )
-            else:
-                var_data[v] = self.ingest_variable(self.variables[v]["cogent_name"])
-
+            except Exception as e:
+                print(
+                    "WARNING: Failed to read variable: {} {}; {}".format(
+                        self.variables[v]["species"],
+                        self.variables[v]["cogent_name"],
+                        e,
+                    )
+                )
         self.var_data = var_data
+
+    def get_shortname(self, variable: str, species=None):
+        """Get the shortname (used in the output dataset) for a given variable and species combination
+
+        :param variable: Name of variable
+        :param species: Name of species (or none, if variable not attached to a species, e.g. potential), defaults to None
+        :return: _description_
+        """
+        if variable == "temperature":
+            first_part = "T"
+        elif variable == "potential":
+            first_part = "phi"
+        elif variable == "parallelVelocity":
+            first_part = "vpar"
+        elif variable == "density":
+            first_part = "n"
+        elif variable == "efield":
+            first_part = "E"
+        else:
+            first_part = variable
+
+        if species is None:
+            second_part = ""
+        else:
+            second_part = species[0]
+
+        return first_part + second_part
+
+    def identify_variables(self):
+        """Identify the variables in the input directory (and species for each variable)"""
+        variables = {}
+        contents = os.listdir(self.rundir)
+        plt_dirs = [
+            c
+            for c in contents
+            if c.startswith("plt_")
+            and c.endswith("_plots")
+            and os.path.isdir(os.path.join(self.rundir, c))
+        ]
+        for pd in plt_dirs:
+            variable_name = "_".join(pd.split("_")[1:-1])
+            files = [
+                f
+                for f in os.listdir(os.path.join(self.rundir, pd))
+                if f.endswith(".hdf5")
+            ]
+            species = [None] * len(files)
+            for i, f in enumerate(files):
+                f_parts = f.split(".")
+                if f_parts[1].isdigit():
+                    species[i] = f_parts[2]
+            species = list(set(species))
+            variables[variable_name] = species
+
+        outdict = {}
+        for v in variables.keys():
+            for s in variables[v]:
+                shortname = self.get_shortname(v, s)
+                outdict[shortname] = {"species": s, "cogent_name": v}
+        return outdict
+
+    def read_input_file(self):
+        """Parse the COGENT input file
+
+        :raises Exception: If input file is not found
+        :return: Dictionary containing fields and values from input file
+        """
+
+        # Find the input file
+        files = os.listdir(self.rundir)
+        input_file = None
+        for f in files:
+            if f.endswith(".in"):
+                input_file = self.rundir / f
+        if input_file is None:
+            raise Exception(
+                "Error: could not find input file (looking for COGENT input file ending in '.in')."
+            )
+
+        # Read the input file
+        input_dict = {}
+        with open(input_file, "r") as f:
+            lines = f.readlines()
+
+            # Remove comments lines and empty lines
+            lines = [l for l in lines if not l.replace(" ", "").startswith("#")]
+            lines = [l for l in lines if l.replace(" ", "") != "\n"]
+            lines = [l.split("#")[0] for l in lines]
+
+            # Parse fields and values
+            for l in lines:
+                line_parts = l.split("=")
+                line_parts = [
+                    lp.replace(" ", "")
+                    .replace('"', "")
+                    .replace("\n", "")
+                    .replace("\t", "")
+                    for lp in line_parts
+                ]
+                if len(line_parts) == 2:
+                    input_dict[line_parts[0]] = line_parts[1]
+
+        return input_dict
 
     def ingest_variable(self, variable: str, species: str | None = None):
         """Read all data and map files for a given variable
@@ -57,6 +182,11 @@ class COGENTReader:
         :param variable: Name of variable
         :param species: Species. If None, then the variable is not tied to a species (e.g. potential)
         """
+        if species is None:
+            print("Reading " + variable + "...")
+        else:
+            print("Reading " + species + " " + variable + "...")
+
         plt_dirname = "plt_" + variable + "_plots"
         if species is None:
             file_prefix = variable
@@ -75,6 +205,7 @@ class COGENTReader:
         files.sort(key=lambda x: int(x.split(".")[-3].strip(variable)))
         map_files.sort(key=lambda x: int(x.split(".")[-4].strip(variable)))
         var_data = []
+
         for i in range(len(files)):
             data = hdf5o.DataHDF5(
                 a_filename=self.rundir / plt_dirname / files[i],
@@ -95,10 +226,14 @@ class COGENTReader:
                 vals = data.main_data_arr[1, :, 0]
                 if i == 0:
                     z = data.map_data_arr[1, 1:, 0]
-            else:
+            elif variable == "dfn":
+                pass
+            elif variable in self.supported_variables:
                 vals = data.main_data_arr[0][:, 0]
                 if i == 0:
                     z = data.map_data_arr[1][1:, 0]
+            else:
+                raise Exception("Parsing variable '" + variable + "' not yet suported.")
             var_data.append(vals)
 
         t = np.arange(len(files))
@@ -107,5 +242,7 @@ class COGENTReader:
             var_data.attrs["name"] = variable
         else:
             var_data.attrs["name"] = species + "." + variable
+
+        print("Done")
 
         return var_data

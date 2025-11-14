@@ -75,7 +75,7 @@ class COGENTDatasetAccessor:
 
             else:
                 for j, var in enumerate(variables):
-                    x = self.z
+                    x = self.ds.z
                     y = var[timestep]
                     try:
                         label = var.attrs["name"] + ", t=" + str(timestep)
@@ -193,7 +193,9 @@ class COGENTDatasetAccessor:
                 frames=num_frames,
             )
             anim.save(savepath, fps=fps)
+            plt.show()
             return anim
+
         else:
             axsurf1 = fig.add_axes([0.15, 0.07, 0.70, 0.03])
             surf1_slider = Slider(
@@ -211,7 +213,7 @@ class COGENTDatasetAccessor:
                 fig.subplots_adjust(bottom=0.2)
             else:
                 fig.subplots_adjust(bottom=0.2, hspace=0.2)
-
+            plt.show()
             return surf1_slider
 
 
@@ -221,14 +223,9 @@ def read_cogent_dataset(rundir: str | Path) -> xr.Dataset:
     :param rundir: Directory containing COGENT data
     :return: xr.Dataset
     """
-    ds = COGENTReader(
-        rundir,
-        variables={
-            "phi": {"cogent_name": "potential"},
-            "E": {"cogent_name": "efield"},
-        },
-    )
+    ds = COGENTReader(rundir)
     xds = xr.Dataset(ds.var_data)
     xds.z.attrs["description"] = "z coordinate"
     xds.t.attrs["description"] = "integer timestamp"
+    xds.attrs["input"] = ds.input_dict
     return xds
