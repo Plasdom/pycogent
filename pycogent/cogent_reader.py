@@ -90,6 +90,10 @@ class COGENTReader:
             first_part = "n"
         elif variable == "efield":
             first_part = "E"
+        elif variable == "parallelHeatFlux":
+            first_part = "q"
+        elif variable == "pressure":
+            first_part = "P"
         else:
             first_part = variable
 
@@ -165,10 +169,7 @@ class COGENTReader:
             for l in lines:
                 line_parts = l.split("=")
                 line_parts = [
-                    lp.replace(" ", "")
-                    .replace('"', "")
-                    .replace("\n", "")
-                    .replace("\t", "")
+                    lp.strip(" ").replace('"', "").replace("\n", "").replace("\t", "")
                     for lp in line_parts
                 ]
                 if len(line_parts) == 2:
@@ -219,9 +220,10 @@ class COGENTReader:
             data.processAll("main")
             data.processAll("map")
             if variable == "potential":
-                vals = data.main_data_arr[0][:-4, 0]
+                num_cells = int(self.input_dict["gksystem.num_cells"].split(" ")[1])
+                vals = data.main_data_arr[0][:num_cells, 0]
                 if i == 0:
-                    z = data.map_data_arr[1][1:, 0][:-4]
+                    z = data.map_data_arr[1][1:, 0][:num_cells]
             elif variable == "efield":
                 vals = data.main_data_arr[1, :, 0]
                 if i == 0:
