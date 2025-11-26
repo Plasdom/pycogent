@@ -202,7 +202,7 @@ class COGENTDatasetAccessor:
                 ax=axsurf1,
                 label=r"Timestep",
                 valmin=0,
-                valmax=int(self.ds.t[-1]) - 1,
+                valmax=int(self.ds.t[-1]),
                 valinit=0,
                 valstep=1,
             )
