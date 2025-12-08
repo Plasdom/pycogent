@@ -657,16 +657,17 @@ class DataHDF5:
                     global_index = start_index + ind
                     # Current index
                     ix = ind_x_0 + ind % n_x
-                    iy = ind_y_0 + (ind / n_x) % n_y
-                    iz = ind_z_0 + (ind / (n_x * n_y)) % n_z
-                    iq = ind_q_0 + ind / (n_x * n_y * n_z)
-                    arr[
+                    iy = ind_y_0 + int(ind / n_x) % n_y
+                    iz = ind_z_0 + int(ind / (n_x * n_y)) % n_z
+                    iq = ind_q_0 + int(ind / (n_x * n_y * n_z))
+                    array_index = int(
                         comp * len_x * len_y * len_z * len_q
                         + iq * len_x * len_y * len_z
                         + iz * len_x * len_y
                         + iy * len_x
                         + ix
-                    ] = a_data[global_index]
+                    )
+                    arr[array_index] = a_data[global_index]
         return arr
 
 

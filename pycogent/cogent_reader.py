@@ -226,6 +226,7 @@ class COGENTReader:
         files.sort(key=lambda x: int(x.split(".")[-3].strip(variable)))
         map_files.sort(key=lambda x: int(x.split(".")[-4].strip(variable)))
         var_data = []
+        n_dims = int(str(self.rundir / plt_dirname / map_files[0]).split(".")[-3][0])
 
         for i in range(len(files)):
             data = hdf5o.DataHDF5(
@@ -238,28 +239,37 @@ class COGENTReader:
             data.removeGhostCells("main")
             data.removeGhostCells("map")
             data.processAll("main")
-            data.processAll("map")
+            if n_dims == 2:
+                data.processAll("map")
+            else:
+                pass
+                # TODO: Implement processing of mapping for 4D map files
             if variable == "potential":
-                num_cells = int(self.input_dict["gksystem.num_cells"].split(" ")[1])
-                vals = data.main_data_arr[0][:num_cells, 0]
-                if i == 0:
-                    z = data.map_data_arr[1][1:, 0][:num_cells]
+                num_z_cells = int(self.input_dict["gksystem.num_cells"].split(" ")[1])
+                vals = data.main_data_arr[0][:num_z_cells, 0]
             elif variable == "efield":
                 vals = data.main_data_arr[1, :, 0]
-                if i == 0:
-                    z = data.map_data_arr[1, 1:, 0]
             elif variable == "dfn":
-                pass
+                vals = data.main_data_arr[0, :, :, :, 0]
             elif variable in self.supported_variables:
                 vals = data.main_data_arr[0][:, 0]
-                if i == 0:
-                    z = data.map_data_arr[1][1:, 0]
             else:
                 raise Exception("Parsing variable '" + variable + "' not yet suported.")
             var_data.append(vals)
 
         t = np.arange(len(files))
-        var_data = xr.DataArray(np.array(var_data), coords={"t": t, "z": z})
+        num_z_cells = int(self.input_dict["gksystem.num_cells"].split(" ")[1])
+        iz = np.arange(num_z_cells)
+        if len(var_data[0].shape) == 1:
+            var_data = xr.DataArray(np.array(var_data), coords={"t": t, "iz": iz})
+        elif len(var_data[0].shape) == 3:
+            num_vpar_cells = int(self.input_dict["gksystem.num_cells"].split(" ")[2])
+            iv = np.arange(num_vpar_cells)
+            num_mu_cells = int(self.input_dict["gksystem.num_cells"].split(" ")[3])
+            im = np.arange(num_mu_cells)
+            var_data = xr.DataArray(
+                np.array(var_data), coords={"t": t, "iv": iv, "im": im, "iz": iz}
+            )
         if species is None:
             var_data.attrs["name"] = variable
         else:

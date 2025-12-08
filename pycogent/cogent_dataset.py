@@ -8,6 +8,7 @@ from pycogent.cogent_reader import COGENTReader
 from matplotlib import animation
 from matplotlib.widgets import Slider
 from matplotlib.colors import TABLEAU_COLORS
+import matplotlib.colors
 
 
 @xr.register_dataset_accessor("cogent")
@@ -65,7 +66,7 @@ class COGENTDatasetAccessor:
         for timestep in t:
             if same_axes or len(variables) == 1:
                 for i, var in enumerate(variables):
-                    x = self.ds.z
+                    x = self.ds.iz
                     y = var[timestep]
                     try:
                         label = var.attrs["name"] + ", t=" + str(timestep)
@@ -75,7 +76,7 @@ class COGENTDatasetAccessor:
 
             else:
                 for j, var in enumerate(variables):
-                    x = self.ds.z
+                    x = self.ds.iz
                     y = var[timestep]
                     try:
                         label = var.attrs["name"] + ", t=" + str(timestep)
@@ -85,15 +86,136 @@ class COGENTDatasetAccessor:
 
         if same_axes or len(variables) == 1:
             ax.legend()
-            ax.set_xlabel("z")
+            ax.set_xlabel("z index")
             ax.grid()
         else:
             for j, var in enumerate(variables):
                 ax[j].legend()
-                ax[j].set_xlabel("z")
+                ax[j].set_xlabel("z index")
                 ax[j].grid()
 
         plt.show()
+
+    def animate4d(
+        self,
+        variable: str | xr.DataArray,
+        logscale: bool = False,
+        neg2nan: bool = False,
+        vmin: float | None = None,
+        vmax: float | None = None,
+        linthresh: float | None = None,
+    ):
+        """Plot a 4D variable (e.g. distribution functions)
+
+        :param variable: Variable, can be string name of variable in dataset or an xarray.DataArray object
+        :param logscale: Use logscale for colour map, defaults to False
+        :param neg2nan: Display negative values as nans, defaults to False
+        :param vmin: Minimum value of colours scale, defaults to None
+        :param vmax: Maximum value of colour scale, defaults to None
+        :param linthresh: If neg2nan is False and logscale is True, linthresh to use for symlog scale colour map, defaults to None
+        :return: sliders
+        """
+        variables = self._get_variables(variable)
+        dfns = variables[0]
+
+        # Identify limits
+        if vmin is None:
+            if neg2nan:
+                vmin = dfns.where(dfns > 0).min().values
+            else:
+                vmin = dfns.min().values
+        if vmax is None:
+            vmax = dfns.max().values
+        if vmin < 0:
+            if linthresh is None:
+                linthresh = dfns.where(dfns > 0).min().values
+
+        print(vmin, vmax)
+
+        # Create colour scale normalisation
+        if logscale:
+            if vmin < 0:
+                norm = matplotlib.colors.SymLogNorm(
+                    vmin=vmin,
+                    vmax=vmax,
+                    linthresh=linthresh,
+                )
+            else:
+                norm = matplotlib.colors.LogNorm(vmin=vmin, vmax=vmax)
+        else:
+            norm = matplotlib.colors.Normalize(vmin=vmin, vmax=vmax)
+
+        fig, ax = plt.subplots(1)
+        c = [None]
+
+        axsurf1 = fig.add_axes([0.15, 0.1, 0.70, 0.03])
+        surf1_slider = Slider(
+            ax=axsurf1,
+            label=r"Timestep",
+            valmin=0,
+            valmax=int(self.ds.t[-1]),
+            valinit=0,
+            valstep=1,
+        )
+        axsurf2 = fig.add_axes([0.15, 0.05, 0.70, 0.03])
+        surf2_slider = Slider(
+            ax=axsurf2,
+            label=r"z index",
+            valmin=0,
+            valmax=int(self.ds.iz[-1]),
+            valinit=0,
+            valstep=1,
+        )
+
+        def draw_t(t):
+            x = self.ds.iv
+            y = self.ds.im
+            f = dfns.isel(t=t, iz=surf2_slider.val)
+            if c[0] is None:
+                c[0] = ax.pcolormesh(
+                    self.ds.iv, self.ds.im, f, cmap="inferno", norm=norm
+                )
+
+            else:
+                # ax.clear()
+                c[0].remove()
+                c[0] = ax.pcolormesh(
+                    self.ds.iv, self.ds.im, f, cmap="inferno", norm=norm
+                )
+                # c[0].update({"array": f, "axes": [self.ds.iv, self.ds.im]})
+
+            return c
+
+        def draw_z(iz):
+            x = self.ds.iv
+            y = self.ds.im
+            f = dfns.isel(t=surf1_slider.val, iz=iz)
+            if c[0] is None:
+                c[0] = ax.pcolormesh(
+                    self.ds.iv, self.ds.im, f, cmap="inferno", norm=norm
+                )
+
+            else:
+                # ax.clear()
+                c[0].remove()
+                c[0] = ax.pcolormesh(
+                    self.ds.iv, self.ds.im, f, cmap="inferno", norm=norm
+                )
+
+            return c
+
+        c = draw_t(0)
+        fig.colorbar(c[0], ax=ax)
+
+        surf1_slider.on_changed(draw_t)
+        surf2_slider.on_changed(draw_z)
+        fig.subplots_adjust(bottom=0.23, hspace=0.2)
+        ax.set_xlabel("vpar index")
+        ax.set_ylabel("mu index")
+        ax.set_title(dfns.attrs["name"])
+
+        plt.show()
+        return surf1_slider, surf2_slider
 
     def animate(
         self,
@@ -140,7 +262,7 @@ class COGENTDatasetAccessor:
             if same_axes:
                 # ax.clear()
                 for j, var in enumerate(variables):
-                    x = self.ds.z
+                    x = self.ds.iz
                     y = var[i]
                     try:
                         label = var.attrs["name"]
@@ -155,7 +277,7 @@ class COGENTDatasetAccessor:
             else:
                 for j, var in enumerate(variables):
                     # ax[j].clear()
-                    x = self.ds.z
+                    x = self.ds.iz
                     y = var[i]
                     try:
                         label = var.attrs["name"]
@@ -175,13 +297,13 @@ class COGENTDatasetAccessor:
 
         lines = draw(0)
         if same_axes:
-            ax.set_xlabel("z")
+            ax.set_xlabel("z index")
             ax.set_ylim((minval, maxval))
             ax.grid(True)
             ax.legend()
         else:
             for j in range(len(variables)):
-                ax[j].set_xlabel("z")
+                ax[j].set_xlabel("z index")
                 ax[j].set_ylim((minval[j], maxval[j]))
                 ax[j].grid(True)
                 ax[j].legend()
@@ -225,7 +347,15 @@ def read_cogent_dataset(rundir: str | Path) -> xr.Dataset:
     """
     ds = COGENTReader(rundir)
     xds = xr.Dataset(ds.var_data)
-    xds.z.attrs["description"] = "z coordinate"
+    xds.iz.attrs["description"] = "z index"
+    try:
+        xds.iv.attrs["description"] = "vpar index"
+    except AttributeError:
+        pass
+    try:
+        xds.im.attrs["description"] = "mu index"
+    except AttributeError:
+        pass
     xds.t.attrs["description"] = "integer timestamp"
     xds.attrs["input"] = ds.input_dict
     print("========= Succesfully created xarray dataset from COGENT data =========")
