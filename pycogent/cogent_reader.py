@@ -268,7 +268,7 @@ class COGENTReader:
             num_mu_cells = int(self.input_dict["gksystem.num_cells"].split(" ")[3])
             im = np.arange(num_mu_cells)
             var_data = xr.DataArray(
-                np.array(var_data), coords={"t": t, "iv": iv, "im": im, "iz": iz}
+                np.array(var_data), coords={"t": t, "im": im, "iv": iv, "iz": iz}
             )
         if species is None:
             var_data.attrs["name"] = variable

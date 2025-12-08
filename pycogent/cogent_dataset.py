@@ -45,7 +45,26 @@ class COGENTDatasetAccessor:
             variables = vs
         return variables
 
-    def plot(self, variables, t=0, same_axes: bool = False):
+    def _get_plot_xdim(self, v):
+        """Get the dimension to use as the x-axis in a 1D plot
+
+        :param v: 1D variable
+        :raises Exception: If variable is not 1D
+        """
+        dims = [d for d in v.dims if d != "t"]
+        if len(dims) == 1:
+            dim = dims[0]
+        else:
+            raise Exception("Variable still has > 1 dimension.")
+        return v[dim]
+
+    def plot(
+        self,
+        variables,
+        t=0,
+        same_axes: bool = False,
+        labels: str | list[str] | None = None,
+    ):
         """Plot a variable or list of variables at a single or multiple timesteps
 
         :param var: Variable or list of variables
@@ -66,17 +85,22 @@ class COGENTDatasetAccessor:
         for timestep in t:
             if same_axes or len(variables) == 1:
                 for i, var in enumerate(variables):
-                    x = self.ds.iz
+                    x = self._get_plot_xdim(var)
+                    print(x)
                     y = var[timestep]
-                    try:
-                        label = var.attrs["name"] + ", t=" + str(timestep)
-                    except:
-                        label = "var " + str(i) + ", t=" + str(timestep)
+                    if labels is not None:
+                        label = labels[i]
+                    else:
+                        try:
+                            label = var.attrs["name"] + ", t=" + str(timestep)
+                        except:
+                            label = "var " + str(i) + ", t=" + str(timestep)
                     ax.plot(x, y, label=label)
 
             else:
                 for j, var in enumerate(variables):
-                    x = self.ds.iz
+                    x = self._get_plot_xdim(var)
+                    print(x)
                     y = var[timestep]
                     try:
                         label = var.attrs["name"] + ", t=" + str(timestep)
@@ -85,13 +109,15 @@ class COGENTDatasetAccessor:
                     ax[j].plot(x, y, label=label)
 
         if same_axes or len(variables) == 1:
+            x = self._get_plot_xdim(variables[0])
             ax.legend()
-            ax.set_xlabel("z index")
+            ax.set_xlabel(x.attrs["description"])
             ax.grid()
         else:
             for j, var in enumerate(variables):
+                x = self._get_plot_xdim(var)
                 ax[j].legend()
-                ax[j].set_xlabel("z index")
+                ax[j].set_xlabel(x.attrs["description"])
                 ax[j].grid()
 
         plt.show()
@@ -107,7 +133,7 @@ class COGENTDatasetAccessor:
     ):
         """Plot a 4D variable (e.g. distribution functions)
 
-        :param variable: Variable, can be string name of variable in dataset or an xarray.DataArray object
+        :param variable: 4D variable, can be string name of variable in dataset or an xarray.DataArray object
         :param logscale: Use logscale for colour map, defaults to False
         :param neg2nan: Display negative values as nans, defaults to False
         :param vmin: Minimum value of colours scale, defaults to None
@@ -173,14 +199,14 @@ class COGENTDatasetAccessor:
             f = dfns.isel(t=t, iz=surf2_slider.val)
             if c[0] is None:
                 c[0] = ax.pcolormesh(
-                    self.ds.iv, self.ds.im, f, cmap="inferno", norm=norm
+                    self.ds.im, self.ds.iv, f, cmap="inferno", norm=norm
                 )
 
             else:
                 # ax.clear()
                 c[0].remove()
                 c[0] = ax.pcolormesh(
-                    self.ds.iv, self.ds.im, f, cmap="inferno", norm=norm
+                    self.ds.im, self.ds.iv, f, cmap="inferno", norm=norm
                 )
                 # c[0].update({"array": f, "axes": [self.ds.iv, self.ds.im]})
 
@@ -192,14 +218,14 @@ class COGENTDatasetAccessor:
             f = dfns.isel(t=surf1_slider.val, iz=iz)
             if c[0] is None:
                 c[0] = ax.pcolormesh(
-                    self.ds.iv, self.ds.im, f, cmap="inferno", norm=norm
+                    self.ds.im, self.ds.iv, f, cmap="inferno", norm=norm
                 )
 
             else:
                 # ax.clear()
                 c[0].remove()
                 c[0] = ax.pcolormesh(
-                    self.ds.iv, self.ds.im, f, cmap="inferno", norm=norm
+                    self.ds.im, self.ds.iv, f, cmap="inferno", norm=norm
                 )
 
             return c
