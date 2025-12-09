@@ -86,7 +86,6 @@ class COGENTDatasetAccessor:
             if same_axes or len(variables) == 1:
                 for i, var in enumerate(variables):
                     x = self._get_plot_xdim(var)
-                    print(x)
                     y = var[timestep]
                     if labels is not None:
                         label = labels[i]
@@ -100,7 +99,6 @@ class COGENTDatasetAccessor:
             else:
                 for j, var in enumerate(variables):
                     x = self._get_plot_xdim(var)
-                    print(x)
                     y = var[timestep]
                     try:
                         label = var.attrs["name"] + ", t=" + str(timestep)
@@ -288,7 +286,7 @@ class COGENTDatasetAccessor:
             if same_axes:
                 # ax.clear()
                 for j, var in enumerate(variables):
-                    x = self.ds.iz
+                    x = self._get_plot_xdim(var)
                     y = var[i]
                     try:
                         label = var.attrs["name"]
@@ -302,8 +300,7 @@ class COGENTDatasetAccessor:
 
             else:
                 for j, var in enumerate(variables):
-                    # ax[j].clear()
-                    x = self.ds.iz
+                    x = self._get_plot_xdim(var)
                     y = var[i]
                     try:
                         label = var.attrs["name"]
@@ -323,13 +320,15 @@ class COGENTDatasetAccessor:
 
         lines = draw(0)
         if same_axes:
-            ax.set_xlabel("z index")
+            x = self._get_plot_xdim(variables[0])
+            ax.set_xlabel(x.attrs["description"])
             ax.set_ylim((minval, maxval))
             ax.grid(True)
             ax.legend()
         else:
             for j in range(len(variables)):
-                ax[j].set_xlabel("z index")
+                x = self._get_plot_xdim(variables[j])
+                ax[j].set_xlabel(x.attrs["description"])
                 ax[j].set_ylim((minval[j], maxval[j]))
                 ax[j].grid(True)
                 ax[j].legend()
