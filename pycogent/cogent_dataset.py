@@ -197,14 +197,14 @@ class COGENTDatasetAccessor:
             f = dfns.isel(t=t, iz=surf2_slider.val)
             if c[0] is None:
                 c[0] = ax.pcolormesh(
-                    self.ds.im, self.ds.iv, f, cmap="inferno", norm=norm
+                    self.ds.iv, self.ds.im, f.T, cmap="inferno", norm=norm
                 )
 
             else:
                 # ax.clear()
                 c[0].remove()
                 c[0] = ax.pcolormesh(
-                    self.ds.im, self.ds.iv, f, cmap="inferno", norm=norm
+                    self.ds.iv, self.ds.im, f.T, cmap="inferno", norm=norm
                 )
                 # c[0].update({"array": f, "axes": [self.ds.iv, self.ds.im]})
 
@@ -216,14 +216,14 @@ class COGENTDatasetAccessor:
             f = dfns.isel(t=surf1_slider.val, iz=iz)
             if c[0] is None:
                 c[0] = ax.pcolormesh(
-                    self.ds.im, self.ds.iv, f, cmap="inferno", norm=norm
+                    self.ds.iv, self.ds.im, f.T, cmap="inferno", norm=norm
                 )
 
             else:
                 # ax.clear()
                 c[0].remove()
                 c[0] = ax.pcolormesh(
-                    self.ds.im, self.ds.iv, f, cmap="inferno", norm=norm
+                    self.ds.iv, self.ds.im, f.T, cmap="inferno", norm=norm
                 )
 
             return c
@@ -236,7 +236,10 @@ class COGENTDatasetAccessor:
         fig.subplots_adjust(bottom=0.23, hspace=0.2)
         ax.set_xlabel("vpar index")
         ax.set_ylabel("mu index")
-        ax.set_title(dfns.attrs["name"])
+        try:
+            ax.set_title(dfns.attrs["name"])
+        except:
+            ax.set_title("custom variable")
 
         plt.show()
         return surf1_slider, surf2_slider
