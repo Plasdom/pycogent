@@ -150,15 +150,13 @@ class COGENTDatasetAccessor:
                 vmin = dfns.min().values
         if vmax is None:
             vmax = dfns.max().values
-        if vmin < 0:
+        if vmin <= 0:
             if linthresh is None:
                 linthresh = dfns.where(dfns > 0).min().values
 
-        print(vmin, vmax)
-
         # Create colour scale normalisation
         if logscale:
-            if vmin < 0:
+            if vmin <= 0:
                 norm = matplotlib.colors.SymLogNorm(
                     vmin=vmin,
                     vmax=vmax,
