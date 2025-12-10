@@ -249,6 +249,7 @@ class COGENTDatasetAccessor:
         fps: int = 5,
         same_axes: bool = False,
         max_t: int | None = None,
+        logscale: bool = False,
     ):
         """Animate one or a list of variables
 
@@ -257,6 +258,7 @@ class COGENTDatasetAccessor:
         :param fps: FPS of the saved gif/movie, defaults to 5
         :param same_axes: If animating multiple variable, whether to plot on the same axes or not, defaults to True
         :param max_t: Maximum timestep to plot, defaults to None
+        :param logscale: Apply logscale to y-axis, defaults to False
         """
 
         variables = self._get_variables(variables)
@@ -298,6 +300,8 @@ class COGENTDatasetAccessor:
                         lines[j] = l
                     else:
                         lines[j].set_data(x, y)
+                    if logscale:
+                        ax.set_yscale("log")
 
             else:
                 for j, var in enumerate(variables):
@@ -312,6 +316,8 @@ class COGENTDatasetAccessor:
                         lines[j] = l
                     else:
                         lines[j].set_data(x, y)
+                    if logscale:
+                        ax[j].set_yscale("log")
 
             return lines
 
