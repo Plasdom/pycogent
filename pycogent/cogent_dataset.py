@@ -327,7 +327,7 @@ class COGENTDatasetAccessor:
             max_t = len(variables[0])
         num_frames = int(min(len(variables[0]), max_t))
 
-        lines = draw(0)
+        lines = draw(self.ds.t.isel(t=0))
         if same_axes:
             x = self._get_plot_xdim(variables[0])
             ax.set_xlabel(x.attrs["description"])
