@@ -258,7 +258,14 @@ class COGENTReader:
                 raise Exception("Parsing variable '" + variable + "' not yet suported.")
             var_data.append(vals)
 
-        t = np.arange(len(files))
+        # Find the time coordinate
+        its = np.arange(len(files))
+        t = np.zeros(len(its), dtype=int)
+        for it in its:
+            fn = files[it]
+            t[it] = int(fn.split(".")[-3].strip(variable))
+
+        # Create DataArray objects
         num_z_cells = int(self.input_dict["gksystem.num_cells"].split(" ")[1])
         iz = np.arange(num_z_cells)
         if len(var_data[0].shape) == 1:
@@ -279,3 +286,7 @@ class COGENTReader:
         # print("Done")
 
         return var_data
+
+    def map_dims(self):
+        """Map integer dimensions to real values in COGENT units"""
+        pass

@@ -174,10 +174,10 @@ class COGENTDatasetAccessor:
         surf1_slider = Slider(
             ax=axsurf1,
             label=r"Timestep",
-            valmin=0,
-            valmax=int(self.ds.t[-1]),
-            valinit=0,
-            valstep=1,
+            valmin=min(self.ds.t.values),
+            valmax=max(self.ds.t.values),
+            valinit=min(self.ds.t.values),
+            valstep=self.ds.t.values,
         )
         axsurf2 = fig.add_axes([0.15, 0.05, 0.70, 0.03])
         surf2_slider = Slider(
@@ -192,7 +192,7 @@ class COGENTDatasetAccessor:
         def draw_t(t):
             x = self.ds.iv
             y = self.ds.im
-            f = dfns.isel(t=t, iz=surf2_slider.val)
+            f = dfns.sel(t=t).isel(iz=surf2_slider.val)
             if c[0] is None:
                 c[0] = ax.pcolormesh(
                     self.ds.iv, self.ds.im, f.T, cmap="inferno", norm=norm
@@ -211,7 +211,7 @@ class COGENTDatasetAccessor:
         def draw_z(iz):
             x = self.ds.iv
             y = self.ds.im
-            f = dfns.isel(t=surf1_slider.val, iz=iz)
+            f = dfns.sel(t=surf1_slider.val).isel(iz=iz)
             if c[0] is None:
                 c[0] = ax.pcolormesh(
                     self.ds.iv, self.ds.im, f.T, cmap="inferno", norm=norm
@@ -290,7 +290,8 @@ class COGENTDatasetAccessor:
                 # ax.clear()
                 for j, var in enumerate(variables):
                     x = self._get_plot_xdim(var)
-                    y = var[i]
+                    # y = var[i]
+                    y = var.sel(t=i)
                     try:
                         label = var.attrs["name"]
                     except:
@@ -306,7 +307,8 @@ class COGENTDatasetAccessor:
             else:
                 for j, var in enumerate(variables):
                     x = self._get_plot_xdim(var)
-                    y = var[i]
+                    # y = var[i]
+                    y = var.sel(t=i)
                     try:
                         label = var.attrs["name"]
                     except:
@@ -355,10 +357,10 @@ class COGENTDatasetAccessor:
             surf1_slider = Slider(
                 ax=axsurf1,
                 label=r"Timestep",
-                valmin=0,
-                valmax=int(self.ds.t[-1]),
-                valinit=0,
-                valstep=1,
+                valmin=min(self.ds.t.values),
+                valmax=max(self.ds.t.values),
+                valinit=min(self.ds.t.values),
+                valstep=self.ds.t.values,
             )
 
             surf1_slider.on_changed(draw)
