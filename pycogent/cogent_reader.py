@@ -238,15 +238,15 @@ class COGENTReader:
                 a_mapping=True,
             )
             data.getData(a_flag="main", a_out=0)
-            data.getData(a_flag="map", a_out=0)
+            # data.getData(a_flag="map", a_out=0)
             data.removeGhostCells("main")
-            data.removeGhostCells("map")
+            # data.removeGhostCells("map")
             data.processAll("main")
-            if n_dims == 2:
-                data.processAll("map")
-            else:
-                pass
-                # TODO: Implement processing of mapping for 4D map files
+            # if n_dims == 2:
+            # data.processAll("map")
+            # else:
+            # pass
+            # TODO: Implement processing of mapping for 4D map files
             if variable == "potential":
                 num_z_cells = int(self.input_dict["gksystem.num_cells"].split(" ")[1])
                 vals = data.main_data_arr[0][:num_z_cells, 0]
@@ -274,12 +274,9 @@ class COGENTReader:
         if len(var_data[0].shape) == 1:
             var_data = xr.DataArray(np.array(var_data), coords={"t": t, "z": self.z})
         elif len(var_data[0].shape) == 3:
-            num_vpar_cells = int(self.input_dict["gksystem.num_cells"].split(" ")[2])
-            iv = np.arange(num_vpar_cells)
-            num_mu_cells = int(self.input_dict["gksystem.num_cells"].split(" ")[3])
-            im = np.arange(num_mu_cells)
             var_data = xr.DataArray(
-                np.array(var_data), coords={"t": t, "iv": iv, "im": im, "z": self.z}
+                np.array(var_data),
+                coords={"t": t, "vpar": self.vpar, "mu": self.mu, "z": self.z},
             )
         if species is None:
             var_data.attrs["name"] = variable
@@ -332,3 +329,11 @@ class COGENTReader:
                 break
 
         self.z = z
+
+        # Do a simple mapping of vparallel/mu
+        vpar_max = float(self.input_dict["phase_space_mapping.v_parallel_max"])
+        mu_max = float(self.input_dict["phase_space_mapping.mu_max"])
+        num_vpar = int(self.input_dict["gksystem.num_cells"].split(" ")[2])
+        num_mu = int(self.input_dict["gksystem.num_cells"].split(" ")[3])
+        self.vpar = np.linspace(-vpar_max, vpar_max, num_vpar)
+        self.mu = np.linspace(0, mu_max, num_mu)

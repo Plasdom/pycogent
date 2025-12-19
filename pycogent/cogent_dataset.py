@@ -193,14 +193,14 @@ class COGENTDatasetAccessor:
             f = dfns.sel(t=t).isel(z=surf2_slider.val)
             if c[0] is None:
                 c[0] = ax.pcolormesh(
-                    self.ds.iv, self.ds.im, f.T, cmap="inferno", norm=norm
+                    self.ds.vpar, self.ds.mu, f.T, cmap="inferno", norm=norm
                 )
 
             else:
                 # ax.clear()
                 c[0].remove()
                 c[0] = ax.pcolormesh(
-                    self.ds.iv, self.ds.im, f.T, cmap="inferno", norm=norm
+                    self.ds.vpar, self.ds.mu, f.T, cmap="inferno", norm=norm
                 )
                 # c[0].update({"array": f, "axes": [self.ds.iv, self.ds.im]})
 
@@ -210,14 +210,14 @@ class COGENTDatasetAccessor:
             f = dfns.sel(t=surf1_slider.val).isel(z=iz)
             if c[0] is None:
                 c[0] = ax.pcolormesh(
-                    self.ds.iv, self.ds.im, f.T, cmap="inferno", norm=norm
+                    self.ds.vpar, self.ds.mu, f.T, cmap="inferno", norm=norm
                 )
 
             else:
                 # ax.clear()
                 c[0].remove()
                 c[0] = ax.pcolormesh(
-                    self.ds.iv, self.ds.im, f.T, cmap="inferno", norm=norm
+                    self.ds.vpar, self.ds.mu, f.T, cmap="inferno", norm=norm
                 )
 
             return c
@@ -228,8 +228,8 @@ class COGENTDatasetAccessor:
         surf1_slider.on_changed(draw_t)
         surf2_slider.on_changed(draw_z)
         fig.subplots_adjust(bottom=0.23, hspace=0.2)
-        ax.set_xlabel("vpar index")
-        ax.set_ylabel("mu index")
+        ax.set_xlabel("vparallel")
+        ax.set_ylabel("mu")
         try:
             ax.set_title(dfns.attrs["name"])
         except:
@@ -377,13 +377,13 @@ def read_cogent_dataset(rundir: str | Path) -> xr.Dataset:
     """
     ds = COGENTReader(rundir)
     xds = xr.Dataset(ds.var_data)
-    xds.z.attrs["description"] = "z index"
+    xds.z.attrs["description"] = "z"
     try:
-        xds.iv.attrs["description"] = "vpar index"
+        xds.vpar.attrs["description"] = "v parallel"
     except AttributeError:
         pass
     try:
-        xds.im.attrs["description"] = "mu index"
+        xds.mu.attrs["description"] = "mu"
     except AttributeError:
         pass
     xds.t.attrs["description"] = "integer timestamp"
