@@ -56,6 +56,9 @@ class COGENTReader:
         # Identify variables
         self.variables = self.identify_variables()
 
+        # Map dimensions
+        self.map_dims()
+
         # read variables
         var_data = {}
         for v in self.variables.keys():
@@ -269,14 +272,14 @@ class COGENTReader:
         num_z_cells = int(self.input_dict["gksystem.num_cells"].split(" ")[1])
         iz = np.arange(num_z_cells)
         if len(var_data[0].shape) == 1:
-            var_data = xr.DataArray(np.array(var_data), coords={"t": t, "iz": iz})
+            var_data = xr.DataArray(np.array(var_data), coords={"t": t, "z": self.z})
         elif len(var_data[0].shape) == 3:
             num_vpar_cells = int(self.input_dict["gksystem.num_cells"].split(" ")[2])
             iv = np.arange(num_vpar_cells)
             num_mu_cells = int(self.input_dict["gksystem.num_cells"].split(" ")[3])
             im = np.arange(num_mu_cells)
             var_data = xr.DataArray(
-                np.array(var_data), coords={"t": t, "iv": iv, "im": im, "iz": iz}
+                np.array(var_data), coords={"t": t, "iv": iv, "im": im, "z": self.z}
             )
         if species is None:
             var_data.attrs["name"] = variable
@@ -289,4 +292,43 @@ class COGENTReader:
 
     def map_dims(self):
         """Map integer dimensions to real values in COGENT units"""
-        pass
+        # Map the z-dimension
+        for v in self.variables.keys():
+            cgtv = self.variables[v]["cogent_name"]
+            plt_dirname = "plt_" + cgtv + "_plots"
+            species = self.variables[v]["species"]
+            if species is None:
+                file_prefix = cgtv
+            else:
+                file_prefix = species + "." + cgtv
+            files = [
+                f
+                for f in os.listdir(self.rundir / plt_dirname)
+                if file_prefix in f and "map" not in f
+            ]
+            map_files = [
+                f
+                for f in os.listdir(self.rundir / plt_dirname)
+                if file_prefix in f and "map" in f
+            ]
+            files.sort(key=lambda x: int(x.split(".")[-3].strip(cgtv)))
+            map_files.sort(key=lambda x: int(x.split(".")[-4].strip(cgtv)))
+            n_dims = int(
+                str(self.rundir / plt_dirname / map_files[0]).split(".")[-3][0]
+            )
+            if n_dims == 2 and cgtv != "potential":
+                data = hdf5o.DataHDF5(
+                    a_filename=self.rundir / plt_dirname / files[0],
+                    a_mapname=self.rundir / plt_dirname / map_files[0],
+                    a_mapping=True,
+                )
+                data.getData(a_flag="main", a_out=0)
+                data.getData(a_flag="map", a_out=0)
+                data.removeGhostCells("main")
+                data.removeGhostCells("map")
+                data.processAll("main")
+                data.processAll("map")
+                z = data.map_data_arr[1][1:, 0]
+                break
+
+        self.z = z

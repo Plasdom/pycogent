@@ -184,15 +184,13 @@ class COGENTDatasetAccessor:
             ax=axsurf2,
             label=r"z index",
             valmin=0,
-            valmax=int(self.ds.iz[-1]),
+            valmax=len(self.ds.z) - 1,
             valinit=0,
             valstep=1,
         )
 
         def draw_t(t):
-            x = self.ds.iv
-            y = self.ds.im
-            f = dfns.sel(t=t).isel(iz=surf2_slider.val)
+            f = dfns.sel(t=t).isel(z=surf2_slider.val)
             if c[0] is None:
                 c[0] = ax.pcolormesh(
                     self.ds.iv, self.ds.im, f.T, cmap="inferno", norm=norm
@@ -209,9 +207,7 @@ class COGENTDatasetAccessor:
             return c
 
         def draw_z(iz):
-            x = self.ds.iv
-            y = self.ds.im
-            f = dfns.sel(t=surf1_slider.val).isel(iz=iz)
+            f = dfns.sel(t=surf1_slider.val).isel(z=iz)
             if c[0] is None:
                 c[0] = ax.pcolormesh(
                     self.ds.iv, self.ds.im, f.T, cmap="inferno", norm=norm
@@ -226,7 +222,7 @@ class COGENTDatasetAccessor:
 
             return c
 
-        c = draw_t(0)
+        c = draw_t(self.ds.t.isel(t=0))
         fig.colorbar(c[0], ax=ax)
 
         surf1_slider.on_changed(draw_t)
@@ -381,7 +377,7 @@ def read_cogent_dataset(rundir: str | Path) -> xr.Dataset:
     """
     ds = COGENTReader(rundir)
     xds = xr.Dataset(ds.var_data)
-    xds.iz.attrs["description"] = "z index"
+    xds.z.attrs["description"] = "z index"
     try:
         xds.iv.attrs["description"] = "vpar index"
     except AttributeError:
