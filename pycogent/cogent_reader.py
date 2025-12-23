@@ -313,7 +313,7 @@ class COGENTReader:
             n_dims = int(
                 str(self.rundir / plt_dirname / map_files[0]).split(".")[-3][0]
             )
-            if n_dims == 2 and cgtv != "potential":
+            if n_dims == 2 and cgtv not in ["potential", "vparmu", "vpartheta"]:
                 data = hdf5o.DataHDF5(
                     a_filename=self.rundir / plt_dirname / files[0],
                     a_mapname=self.rundir / plt_dirname / map_files[0],
