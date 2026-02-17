@@ -226,10 +226,11 @@ class COGENTReader:
             for f in os.listdir(self.rundir / plt_dirname)
             if file_prefix in f and "map" in f
         ]
-        files.sort(key=lambda x: int(x.split(".")[-3].strip(variable)))
-        map_files.sort(key=lambda x: int(x.split(".")[-4].strip(variable)))
+        if len(files) > 1:        
+            files.sort(key=lambda x: int(x.split(".")[-3].strip(variable)))
+            map_files.sort(key=lambda x: int(x.split(".")[-4].strip(variable)))
         var_data = []
-        n_dims = int(str(self.rundir / plt_dirname / map_files[0]).split(".")[-3][0])
+        # n_dims = int(str(self.rundir / plt_dirname / map_files[0]).split(".")[-3][0])
 
         for i in range(len(files)):
             data = hdf5o.DataHDF5(
@@ -252,13 +253,21 @@ class COGENTReader:
                 vals = data.main_data_arr[0][:num_z_cells, 0]
             elif variable == "efield":
                 vals = data.main_data_arr[1, :, 0]
-            elif variable == "dfn":
+            # elif variable in ["dfn", "linerad_cls_freq"]:
+            elif "4d" in files[0]:
                 vals = data.main_data_arr[0, :, :, :, 0]
                 vals = np.swapaxes(vals, 0, 1)
             elif variable in self.supported_variables:
                 vals = data.main_data_arr[0][:, 0]
             else:
-                raise Exception("Parsing variable '" + variable + "' not yet suported.")
+                try:
+                    vals = data.main_data_arr[0][:, 0]
+                except:
+                    try:
+                        vals = data.main_data_arr[0, :, :, :, 0]
+                        vals = np.swapaxes(vals, 0, 1)
+                    except:
+                        raise Exception("Parsing variable '" + variable + "' not yet suported.")
             var_data.append(vals)
 
         # Find the time coordinate
@@ -331,9 +340,10 @@ class COGENTReader:
         self.z = z
 
         # Do a simple mapping of vparallel/mu
-        vpar_max = float(self.input_dict["phase_space_mapping.v_parallel_max"])
-        mu_max = float(self.input_dict["phase_space_mapping.mu_max"])
         num_vpar = int(self.input_dict["gksystem.num_cells"].split(" ")[2])
         num_mu = int(self.input_dict["gksystem.num_cells"].split(" ")[3])
-        self.vpar = np.linspace(-vpar_max, vpar_max, num_vpar)
-        self.mu = np.linspace(0, mu_max, num_mu)
+        vpar_max = float(self.input_dict["phase_space_mapping.v_parallel_max"])
+        mu_max = float(self.input_dict["phase_space_mapping.mu_max"])
+        mu_min = mu_max / num_mu
+        self.mu = np.linspace(mu_min-0.5*mu_max/num_mu,mu_max-0.5*mu_max/num_mu,num_mu)
+        self.vpar = np.linspace(-vpar_max+vpar_max/num_vpar,vpar_max-vpar_max/num_vpar,num_vpar) # Note this vpar does not account for species mass
