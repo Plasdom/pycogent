@@ -200,6 +200,42 @@ class COGENTReader:
 
         return input_dict
 
+    def get_files(self, variable: str, species: str | None = None):
+        """Get filepaths of all data files and map files for a given variable
+
+        :param variable: Name of variable
+        :param species: Species. If None, then the variable is not tied to a species (e.g. potential)
+        :return: _description_
+        """
+        if species is None:
+            file_prefix = variable
+        else:
+            file_prefix = species + "." + variable
+
+        files = []
+        map_files = []
+        
+        plt_dirnames = ["plt_" + variable + "_plots"]
+        restart_dirname = "restart.plt_" + variable + "_plots"
+        if os.path.exists(self.rundir / restart_dirname):
+            plt_dirnames += [restart_dirname]
+
+        for plt_dirname in plt_dirnames:
+            files += [
+                self.rundir / plt_dirname / f
+                for f in os.listdir(self.rundir / plt_dirname)
+                if file_prefix in f and "map" not in f
+            ]
+            map_files += [
+                self.rundir / plt_dirname / f
+                for f in os.listdir(self.rundir / plt_dirname)
+                if file_prefix in f and "map" in f
+            ]
+        if len(files) > 1:        
+            files.sort(key=lambda x: int(x.name.split(".")[-3].strip(variable)))
+            map_files.sort(key=lambda x: int(x.name.split(".")[-4].strip(variable)))
+        return files, map_files
+
     def ingest_variable(self, variable: str, species: str | None = None):
         """Read all data and map files for a given variable
 
@@ -211,31 +247,14 @@ class COGENTReader:
         # else:
         #     print("Reading " + species + " " + variable + "...")
 
-        plt_dirname = "plt_" + variable + "_plots"
-        if species is None:
-            file_prefix = variable
-        else:
-            file_prefix = species + "." + variable
-        files = [
-            f
-            for f in os.listdir(self.rundir / plt_dirname)
-            if file_prefix in f and "map" not in f
-        ]
-        map_files = [
-            f
-            for f in os.listdir(self.rundir / plt_dirname)
-            if file_prefix in f and "map" in f
-        ]
-        if len(files) > 1:        
-            files.sort(key=lambda x: int(x.split(".")[-3].strip(variable)))
-            map_files.sort(key=lambda x: int(x.split(".")[-4].strip(variable)))
+        files, map_files = self.get_files(variable, species)
         var_data = []
         # n_dims = int(str(self.rundir / plt_dirname / map_files[0]).split(".")[-3][0])
 
         for i in range(len(files)):
             data = hdf5o.DataHDF5(
-                a_filename=self.rundir / plt_dirname / files[i],
-                a_mapname=self.rundir / plt_dirname / map_files[i],
+                a_filename=files[i],
+                a_mapname=map_files[i],
                 a_mapping=True,
             )
             data.getData(a_flag="main", a_out=0)
@@ -254,7 +273,7 @@ class COGENTReader:
             elif variable == "efield":
                 vals = data.main_data_arr[1, :, 0]
             # elif variable in ["dfn", "linerad_cls_freq"]:
-            elif "4d" in files[0]:
+            elif "4d" in files[0].name:
                 vals = data.main_data_arr[0, :, :, :, 0]
                 vals = np.swapaxes(vals, 0, 1)
             elif variable in self.supported_variables:
@@ -274,7 +293,7 @@ class COGENTReader:
         its = np.arange(len(files))
         t = np.zeros(len(its), dtype=int)
         for it in its:
-            fn = files[it]
+            fn = files[it].name
             t[it] = int(fn.split(".")[-3].strip(variable))
 
         # Create DataArray objects
@@ -301,31 +320,15 @@ class COGENTReader:
         # Map the z-dimension
         for v in self.variables.keys():
             cgtv = self.variables[v]["cogent_name"]
-            plt_dirname = "plt_" + cgtv + "_plots"
             species = self.variables[v]["species"]
-            if species is None:
-                file_prefix = cgtv
-            else:
-                file_prefix = species + "." + cgtv
-            files = [
-                f
-                for f in os.listdir(self.rundir / plt_dirname)
-                if file_prefix in f and "map" not in f
-            ]
-            map_files = [
-                f
-                for f in os.listdir(self.rundir / plt_dirname)
-                if file_prefix in f and "map" in f
-            ]
-            files.sort(key=lambda x: int(x.split(".")[-3].strip(cgtv)))
-            map_files.sort(key=lambda x: int(x.split(".")[-4].strip(cgtv)))
+            files, map_files = self.get_files(cgtv, species)
             n_dims = int(
-                str(self.rundir / plt_dirname / map_files[0]).split(".")[-3][0]
+                str(map_files[0]).split(".")[-3][0]
             )
             if n_dims == 2 and cgtv not in ["potential", "vparmu", "vpartheta"]:
                 data = hdf5o.DataHDF5(
-                    a_filename=self.rundir / plt_dirname / files[0],
-                    a_mapname=self.rundir / plt_dirname / map_files[0],
+                    a_filename=files[0],
+                    a_mapname=map_files[0],
                     a_mapping=True,
                 )
                 data.getData(a_flag="main", a_out=0)
