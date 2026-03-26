@@ -388,5 +388,6 @@ def read_cogent_dataset(rundir: str | Path) -> xr.Dataset:
         pass
     xds.t.attrs["description"] = "integer timestamp"
     xds.attrs["input"] = ds.input_dict
+    xds = xds.drop_duplicates(dim="t")
     print("========= Succesfully created xarray dataset from COGENT data =========")
     return xds
