@@ -26,22 +26,29 @@ class COGENTDatasetAccessor:
         # self.metadata = ds.attrs.get("metadata")  # None if just grid file
         # self.options = ds.attrs.get("options")  # None if no inp file
 
-    def _get_variables(self, variables):
+    def _get_variables(self, variables: str | list[str | xr.DataArray] | list[list[str | xr.DataArray]]):
         """Get a list of xr.DataArray objects from a list of either variable names or xr.DataArray objects
 
         :param variables: list of xr.DataArrays
         """
         if isinstance(variables, str):
-            variables = [self.ds[variables]]
+            variables = [[self.ds[variables]]]
         elif isinstance(variables, xr.DataArray):
-            variables = [variables]
+            variables = [[variables]]
         elif isinstance(variables, list):
             vs = []
             for v in variables:
-                if isinstance(v, str):
-                    vs.append(self.ds[v])
+                if isinstance(v, list):
+                    vs.append([])
+                    for j in range(len(v)):
+                        if isinstance(v[j], str):
+                            vs[-1].append(self.ds[v[j]])
+                        else:
+                            vs[-1].append(v[j])
+                elif isinstance(v, str):
+                    vs.append([self.ds[v]])
                 else:
-                    vs.append(v)
+                    vs.append([v])
             variables = vs
         return variables
 
@@ -58,67 +65,67 @@ class COGENTDatasetAccessor:
             raise Exception("Variable still has > 1 dimension.")
         return v[dim]
 
-    def plot(
-        self,
-        variables,
-        t=0,
-        same_axes: bool = False,
-        labels: str | list[str] | None = None,
-    ):
-        """Plot a variable or list of variables at a single or multiple timesteps
+    # def plot(
+    #     self,
+    #     variables,
+    #     t=0,
+    #     same_axes: bool = False,
+    #     labels: str | list[str] | None = None,
+    # ):
+    #     """Plot a variable or list of variables at a single or multiple timesteps
 
-        :param var: Variable or list of variables
-        :param timestep: Timestep or list of timsteps
-        :param same_axes: Whether to plot the variables on the same axes, defaults to True
-        """
-        variables = self._get_variables(variables)
-        if isinstance(t, int):
-            t = [t]
-        elif isinstance(t, list):
-            t = t
+    #     :param var: Variable or list of variables
+    #     :param timestep: Timestep or list of timsteps
+    #     :param same_axes: Whether to plot the variables on the same axes, defaults to True
+    #     """
+    #     variables = self._get_variables(variables)
+    #     if isinstance(t, int):
+    #         t = [t]
+    #     elif isinstance(t, list):
+    #         t = t
 
-        if same_axes:
-            fig, ax = plt.subplots(1)
-        else:
-            fig, ax = plt.subplots(len(variables))
+    #     if same_axes:
+    #         fig, ax = plt.subplots(1)
+    #     else:
+    #         fig, ax = plt.subplots(len(variables))
 
-        for timestep in t:
-            if same_axes or len(variables) == 1:
-                for i, var in enumerate(variables):
-                    x = self._get_plot_xdim(var)
-                    y = var[timestep]
-                    if labels is not None:
-                        label = labels[i]
-                    else:
-                        try:
-                            label = var.attrs["name"] + ", t=" + str(timestep)
-                        except:
-                            label = "var " + str(i) + ", t=" + str(timestep)
-                    ax.plot(x, y, label=label)
+    #     for timestep in t:
+    #         if same_axes or len(variables) == 1:
+    #             for i, var in enumerate(variables):
+    #                 x = self._get_plot_xdim(var)
+    #                 y = var[timestep]
+    #                 if labels is not None:
+    #                     label = labels[i]
+    #                 else:
+    #                     try:
+    #                         label = var.attrs["name"] + ", t=" + str(timestep)
+    #                     except:
+    #                         label = "var " + str(i) + ", t=" + str(timestep)
+    #                 ax.plot(x, y, label=label)
 
-            else:
-                for j, var in enumerate(variables):
-                    x = self._get_plot_xdim(var)
-                    y = var[timestep]
-                    try:
-                        label = var.attrs["name"] + ", t=" + str(timestep)
-                    except:
-                        label = "var " + str(i) + ", t=" + str(timestep)
-                    ax[j].plot(x, y, label=label)
+    #         else:
+    #             for j, var in enumerate(variables):
+    #                 x = self._get_plot_xdim(var)
+    #                 y = var[timestep]
+    #                 try:
+    #                     label = var.attrs["name"] + ", t=" + str(timestep)
+    #                 except:
+    #                     label = "var " + str(i) + ", t=" + str(timestep)
+    #                 ax[j].plot(x, y, label=label)
 
-        if same_axes or len(variables) == 1:
-            x = self._get_plot_xdim(variables[0])
-            ax.legend()
-            ax.set_xlabel(x.attrs["description"])
-            ax.grid()
-        else:
-            for j, var in enumerate(variables):
-                x = self._get_plot_xdim(var)
-                ax[j].legend()
-                ax[j].set_xlabel(x.attrs["description"])
-                ax[j].grid()
+    #     if same_axes or len(variables) == 1:
+    #         x = self._get_plot_xdim(variables[0])
+    #         ax.legend()
+    #         ax.set_xlabel(x.attrs["description"])
+    #         ax.grid()
+    #     else:
+    #         for j, var in enumerate(variables):
+    #             x = self._get_plot_xdim(var)
+    #             ax[j].legend()
+    #             ax[j].set_xlabel(x.attrs["description"])
+    #             ax[j].grid()
 
-        plt.show()
+    #     plt.show()
 
     def animate4d(
         self,
@@ -129,7 +136,7 @@ class COGENTDatasetAccessor:
         vmax: float | None = None,
         linthresh: float | None = None,
     ):
-        """Plot a 4D variable (e.g. distribution functions)
+        """Plot a 4D variable (e.g. distribution function)
 
         :param variable: 4D variable, can be string name of variable in dataset or an xarray.DataArray object
         :param logscale: Use logscale for colour map, defaults to False
@@ -140,7 +147,7 @@ class COGENTDatasetAccessor:
         :return: sliders
         """
         variables = self._get_variables(variable)
-        dfns = variables[0]
+        dfns = variables[0][0]
 
         # Identify limits
         if vmin is None:
@@ -240,109 +247,83 @@ class COGENTDatasetAccessor:
 
     def animate(
         self,
-        variables: str | list[str],
+        variables: str | list[str | xr.DataArray] | list[list[str | xr.DataArray]],
         savepath: str | None = None,
         fps: int = 5,
-        same_axes: bool = False,
         max_t: int | None = None,
         logscale: bool = False,
     ):
         """Animate one or a list of variables
 
-        :param var: Variable or list of variables to animate
+        :param var: Variable(s) to plot
         :param savepath: Path to save a gif or movie of the animation, defaults to None
         :param fps: FPS of the saved gif/movie, defaults to 5
-        :param same_axes: If animating multiple variable, whether to plot on the same axes or not, defaults to True
         :param max_t: Maximum timestep to plot, defaults to None
         :param logscale: Apply logscale to y-axis, defaults to False
         """
 
         variables = self._get_variables(variables)
 
-        if same_axes:
-            fig, ax = plt.subplots(1)
-        else:
-            fig, ax = plt.subplots(len(variables))
-            if len(variables) == 1:
-                ax = [ax]
+        num_axes = len(variables)
+        fig, ax = plt.subplots(nrows=num_axes)
+        if num_axes == 1:
+            ax = [ax]
 
-        if same_axes:
+        minvals = []
+        maxvals = []
+        for i in range(num_axes):
             all_data = np.concatenate(
-                [np.array([var[i] for i in range(len(var))]) for var in variables]
+                [np.array([var[i] for i in range(len(var))]) for var in variables[i]]
             )
-            minval = all_data.min()
-            maxval = all_data.max()
-        else:
-            minval = []
-            maxval = []
-            for j in range(len(variables)):
-                minval.append(variables[j].min())
-                maxval.append(variables[j].max())
+            minvals.append(all_data.min())
+            maxvals.append(all_data.max())
+                
 
-        lines = [None for _ in range(len(variables))]
+        lines = []
+        for j in range(num_axes):
+            for _ in range(len(variables[j])):
+                lines.append(None)
 
         def draw(i):
-            if same_axes:
-                # ax.clear()
-                for j, var in enumerate(variables):
+            ax[0].set_title("timestep = {}".format(i))
+            line_count = -1
+            for j in range(num_axes):
+                for k in range(len(variables[j])):
+                    line_count += 1
+                    var = variables[j][k]
                     x = self._get_plot_xdim(var)
-                    # y = var[i]
                     y = var.sel(t=i)
                     try:
                         label = var.attrs["name"]
                     except:
                         label = "var " + str(j)
-                    if lines[j] is None:
-                        (l,) = ax.plot(x, y, label=label)
-                        lines[j] = l
-                    else:
-                        lines[j].set_data(x, y)
-                    if logscale:
-                        ax.set_yscale("log")
-
-            else:
-                for j, var in enumerate(variables):
-                    x = self._get_plot_xdim(var)
-                    # y = var[i]
-                    y = var.sel(t=i)
-                    try:
-                        label = var.attrs["name"]
-                    except:
-                        label = "var " + str(j)
-                    if lines[j] is None:
+                    if lines[line_count] is None:
                         (l,) = ax[j].plot(x, y, label=label)
-                        lines[j] = l
+                        lines[line_count] = l
                     else:
-                        lines[j].set_data(x, y)
+                        lines[line_count].set_data(x, y)
                     if logscale:
                         ax[j].set_yscale("log")
 
             return lines
 
         if max_t is None:
-            max_t = len(variables[0])
-        num_frames = int(min(len(variables[0]), max_t))
+            max_t = len(variables[0][0])
+        num_frames = int(min(len(variables[0][0]), max_t))
 
-        lines = draw(self.ds.t.isel(t=0))
-        if same_axes:
-            x = self._get_plot_xdim(variables[0])
-            ax.set_xlabel(x.attrs["description"])
-            ax.set_ylim((minval, maxval))
-            ax.grid(True)
-            ax.legend()
-        else:
-            for j in range(len(variables)):
-                x = self._get_plot_xdim(variables[j])
-                ax[j].set_xlabel(x.attrs["description"])
-                ax[j].set_ylim((minval[j], maxval[j]))
-                ax[j].grid(True)
-                ax[j].legend()
+        lines = draw(int(self.ds.t.isel(t=0)))
+        for j in range(num_axes):
+            x = self._get_plot_xdim(variables[j][0])
+            ax[j].set_xlabel(x.attrs["description"])
+            ax[j].set_ylim((minvals[j], maxvals[j]))
+            ax[j].grid(True)
+            ax[j].legend()
 
         if savepath is not None:
             anim = animation.FuncAnimation(
                 fig,
                 draw,
-                frames=num_frames,
+                frames=variables[0][0].t.values,
             )
             anim.save(savepath, fps=fps)
             plt.show()
@@ -361,7 +342,7 @@ class COGENTDatasetAccessor:
 
             surf1_slider.on_changed(draw)
 
-            if same_axes:
+            if num_axes == 1:
                 fig.subplots_adjust(bottom=0.2)
             else:
                 fig.subplots_adjust(bottom=0.2, hspace=0.2)
