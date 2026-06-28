@@ -265,7 +265,7 @@ class COGENTDatasetAccessor:
         variables = self._get_variables(variables)
 
         num_axes = len(variables)
-        fig, ax = plt.subplots(nrows=num_axes)
+        fig, ax = plt.subplots(nrows=num_axes, sharex=True)
         if num_axes == 1:
             ax = [ax]
 
@@ -314,10 +314,11 @@ class COGENTDatasetAccessor:
         lines = draw(int(self.ds.t.isel(t=0)))
         for j in range(num_axes):
             x = self._get_plot_xdim(variables[j][0])
-            ax[j].set_xlabel(x.attrs["description"])
+            
             ax[j].set_ylim((minvals[j], maxvals[j]))
             ax[j].grid(True)
             ax[j].legend()
+        ax[-1].set_xlabel(x.attrs["description"])
 
         if savepath is not None:
             anim = animation.FuncAnimation(
@@ -345,7 +346,7 @@ class COGENTDatasetAccessor:
             if num_axes == 1:
                 fig.subplots_adjust(bottom=0.2)
             else:
-                fig.subplots_adjust(bottom=0.2, hspace=0.2)
+                fig.subplots_adjust(bottom=0.2, hspace=0.05, top=0.95)
             plt.show()
             return surf1_slider
 
